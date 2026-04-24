@@ -1,66 +1,66 @@
 import telebot
-from telebot import types
-from aliexpress_api import AliexpressApi, models
-import re
 import requests
+import time
+import hashlib
 
-# 1. إعدادات الوصول (التوكن الخاص بك)
-API_TOKEN = '8503828764:AAEZScCTpA3I5Dwpg8rliweyeGFZo-HIPJM'
-bot = telebot.TeleBot(API_TOKEN)
+# --- إعدادات التوكن والمفاتيح ---
+BOT_TOKEN = '8503828764:AAEZScCTpA3I5Dwpg8rliweyeGFZo-HIPJM'
+APP_KEY = '532804'
+APP_SECRET = 'WSGl2s7FrNhXVxsmTpgMEthlHeIOKzeX'
+TRACKING_ID = 'Med-Jamel23' في لوحة تحكم Portals
 
-# 2. بيانات الأفلييت (تأكد أن هذه الأرقام مطابقة لحسابك في Portals)
-app_key = '532804'
-secret_key = 'WSGl2s7FrNhXVxsmTpgMEthlHeIOKzeX'
-tracking_id = 'Med-Jamel23'
+bot = telebot.TeleBot(BOT_TOKEN)
 
-aliexpress = AliexpressApi(app_key, secret_key, models.Language.EN, models.Currency.EUR, tracking_id)
+def generate_affiliate_link(product_url):
+    """دالة للتواصل مع API علي إكسبريس وتحويل الرابط"""
+    endpoint = "https://api-sg.aliexpress.com/sync" # السيرفر الآسيوي
+    
+    # المعايير المطلوبة للـ API
+    params = {
+        'method': 'aliexpress.affiliate.link.generate',
+        'app_key': APP_KEY,
+        'sign_method': 'md5',
+        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+        'format': 'json',
+        'v': '2.0',
+        'promotion_link_type': '0',
+        'source_values': product_url,
+        'tracking_id': TRACKING_ID
+    }
 
-def get_final_url(url):
-    """دالة لفك الروابط المختصرة والحصول على الرابط الأصلي للمنتج"""
+    # عملية التوقيع (Signing) - ضرورية لأمان الطلب
+    query = "".join(f"{k}{v}" for k, v in sorted(params.items()))
+    sign_str = f"{APP_SECRET}{query}{APP_SECRET}"
+    params['sign'] = hashlib.md5(sign_str.encode('utf-8')).hexdigest().upper()
+
     try:
-        session = requests.Session()
-        resp = session.head(url, allow_redirects=True, timeout=10)
-        return resp.url
-    except:
-        return url
+        response = requests.get(endpoint, params=params)
+        data = response.json()
+        # استخراج الرابط المطور من النتيجة
+        aff_link = data['aliexpress_affiliate_link_generate_response']['resp_result']['result']['promotion_links']['promotion_link'][0]['promotion_link']
+        return aff_link
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+# --- التعامل مع الرسائل في تليجرام ---
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    markup = types.InlineKeyboardMarkup()
-    btn = types.InlineKeyboardButton("⭐️ قناة العروض ⭐️", url="https://t.me/AliXPromotion")
-    markup.add(btn)
-    bot.reply_to(message, "أهلاً بك أبو زيد في بوت تحويل روابط AliExpress! 🛒\n\nأرسل لي رابط المنتج وسأقوم بتجهيزه لك فوراً.", reply_markup=markup)
+def welcome(message):
+    bot.reply_to(message, "مرحباًBestDealsProoo! أرسل لي أي رابط من AliExpress وسأقوم بتحويله لرابط عمولة فوراً.")
 
-@bot.message_handler(func=lambda message: True)
-def process_links(message):
-    # استخراج الرابط من نص الرسالة
-    match = re.search(r'(https?://\S+)', message.text)
-    if not match:
-        bot.reply_to(message, "من فضلك أرسل رابطاً صحيحاً.")
-        return
-
-    original_url = match.group(1)
+@bot.message_handler(func=lambda message: "aliexpress.com" in message.text)
+def handle_link(message):
+    url = message.text.strip()
+    bot.send_message(message.chat.id, "جاري تحويل الرابط... ⏳")
     
-    if "aliexpress.com" in original_url:
-        msg = bot.send_message(message.chat.id, "جاري تحويل الرابط... ⏳")
-        try:
-            # خطوة مهمة: الحصول على الرابط الحقيقي للمنتج
-            real_url = get_final_url(original_url)
-            
-            # تحويله لرابط أفلييت خاص بك
-            aff_links = aliexpress.get_affiliate_links(real_url)
-            
-            if aff_links:
-                final_aff_url = aff_links[0].promotion_link
-                # إرسال النتيجة النهائية
-                bot.edit_message_text(f"✅ تم تجهيز الرابط الخاص بك:\n\n🔗 {final_aff_url}\n\nتمنياتنا لك بالتوفيق في مبيعاتك! 🚀", 
-                                      message.chat.id, msg.message_id)
-            else:
-                bot.edit_message_text("❌ لم أتمكن من تحويل هذا الرابط. تأكد أنه رابط منتج متاح للأفلييت.", message.chat.id, msg.message_id)
-        
-        except Exception as e:
-            bot.edit_message_text(f"⚠️ حدث خطأ فني. تأكد من تفعيل الـ API في Portals.", message.chat.id, msg.message_id)
+    aff_link = generate_affiliate_link(url)
+    
+    if aff_link:
+        text = f"✅ **تم إنشاء رابط العمولة بنجاح:**\n\n{aff_link}"
+        bot.send_message(message.chat.id, text, parse_mode="Markdown")
     else:
-        bot.send_message(message.chat.id, "عذراً، أقبل روابط AliExpress فقط.")
+        bot.send_message(message.chat.id, "عذراً، حدث خطأ أثناء تحويل الرابط. تأكد من صحة المفاتيح.")
 
+print("البوت يعمل الآن...")
 bot.infinity_polling()
