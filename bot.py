@@ -26,12 +26,10 @@ btn1 = types.InlineKeyboardButton("⭐️ألعاب لجمع العملات ال
 btn2 = types.InlineKeyboardButton("⭐️تخفيض العملات على منتجات السلة 🛒⭐️",
                                   callback_data='click')
 
-btn4 = types.InlineKeyboardButton("🎬 شاهد كيفية عمل البوت 🎬",
-                                  url="https://t.me/AliXPromotion/8")
-btn5 = types.InlineKeyboardButton(
-    "💰  حمل تطبيق Aliexpress عبر الضغط هنا للحصول على مكافأة 5 دولار  💰",
-    url="https://a.aliexpress.com/_mtV0j3q")
-keyboardStart.add(btn1, btn2, btn3, btn4, btn5)
+    markup = types.InlineKeyboardMarkup()
+    btn1 = types.InlineKeyboardButton("أحدث العروض 🔥", url="https://a.aliexpress.com/_mtV0j3")
+    markup.add(btn1)
+
 
 keyboard = types.InlineKeyboardMarkup(row_width=1)
 btn1 = types.InlineKeyboardButton("⭐️ألعاب لجمع العملات المعدنية⭐️",
