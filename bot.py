@@ -8,7 +8,7 @@ API_TOKEN = '8503828764:AAEZScCTpA3I5Dwpg8rliweyeGFZo-HIPJM'
 bot = telebot.TeleBot(API_TOKEN)
 
 # إعدادات علي إكسبريس (تأكد من صحتها)
-aliexpress = AliexpressApi('502336', 'qW3MlLGKtt7jnZOg8KkHpfCbTaac2LOq',
+aliexpress = AliexpressApi('532804', 'qW3MlLGKtt7jnZOg8KkHpfCbTaac2LOq',
                            models.Language.EN, models.Currency.EUR, 'default')
 
 # تعريف الكيبورد (زر واحد بسيط للتجربة)
